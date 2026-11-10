@@ -19,12 +19,16 @@ Classic Era and other versions are not supported.
 
 ## Installation
 
-The folder in your AddOns directory **must** be named `QuestProgressAlert`, otherwise WoW will not load the addon:
+Install it from [CurseForge](https://www.curseforge.com/wow/addons/quest-progress-alert), e.g. with the CurseForge app.
+
+For a manual installation, note that the folder in your AddOns directory **must** be named `QuestProgressAlert`, otherwise WoW will not load the addon:
 
 ```bash
 cd "C:/Program Files (x86)/World of Warcraft/_forever_/Interface/AddOns"
 git clone https://github.com/byWulf/wow-quest-progress-alert.git QuestProgressAlert
 ```
+
+Alternatively, download the ZIP from the [releases](https://github.com/byWulf/wow-quest-progress-alert/releases) and extract it into `Interface/AddOns`.
 
 Then restart the game (a new addon is not picked up by `/reload`).
 

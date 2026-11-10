@@ -5,6 +5,7 @@
 ## Author: byWulf
 ## Version: @project-version@
 ## X-License: MIT
+## X-Curse-Project-ID: 1796362
 ## SavedVariables: QuestProgressAlertDB
 ## IconTexture: Interface\Icons\INV_Misc_Note_01
 
