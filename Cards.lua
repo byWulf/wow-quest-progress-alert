@@ -194,6 +194,7 @@ local function CreateCard()
         mask:SetTexture(MEDIA .. "IconMask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
         mask:SetAllPoints(iconFrame)
         card.icon:AddMaskTexture(mask)
+        card.mask = mask
     end
     card.iconBorder = NewTexture(iconFrame, MEDIA .. "IconBorder", "OVERLAY", 0)
     card.iconBorder:SetAllPoints(iconFrame)
@@ -329,7 +330,50 @@ local function ApplyStyle(card)
     card.shine:SetSize(height * 1.6, height)
 end
 
-local function Refresh(card)
+-- Enemy portraits are textures kept by ns.Portraits; a card borrows one while it shows it.
+local Refresh
+
+local function DetachPortrait(card)
+    local entry = card.portraitEntry
+    if not entry then
+        return
+    end
+    card.portraitEntry = nil
+    if entry.card == card then
+        ns.Portraits.Return(entry)
+    end
+end
+
+local function AttachPortrait(card, entry)
+    if card.portraitEntry == entry and entry.card == card then
+        return
+    end
+    DetachPortrait(card)
+    local other = entry.card
+    if other and other ~= card then
+        -- Another card shows the same enemy: it falls back to its normal icon.
+        DetachPortrait(other)
+        if other.data then
+            other.data.portrait = nil
+            Refresh(other)
+        end
+    end
+    local texture = entry.tex
+    texture:SetParent(card.iconFrame)
+    texture:SetDrawLayer("ARTWORK", 1)
+    texture:ClearAllPoints()
+    texture:SetAllPoints(card.iconFrame)
+    texture:SetTexCoord(0.06, 0.94, 0.06, 0.94)
+    if card.mask then
+        texture:AddMaskTexture(card.mask)
+        entry.mask = card.mask
+    end
+    texture:Show()
+    entry.card = card
+    card.portraitEntry = entry
+end
+
+function Refresh(card)
     local db = ns.db
     local data = card.data
     local m = card.metrics
@@ -389,6 +433,13 @@ local function Refresh(card)
         card.icon:Show()
         card.iconBg:Show()
         card.iconBorder:Show()
+        local portrait = not headline and db.showPortraits and data.portrait
+        if portrait then
+            AttachPortrait(card, portrait)
+            card.icon:Hide()
+        else
+            DetachPortrait(card)
+        end
         if headline then
             local file = MEDIA .. (data.failed and "Cross" or "Check")
             card.icon:Hide()
@@ -400,7 +451,7 @@ local function Refresh(card)
             card.symbolShadow:SetVertexColor(0, 0, 0, 0.85)
             card.symbol:Show()
             card.symbolShadow:Show()
-        elseif not card.portraitSet then
+        elseif not portrait then
             card.icon:SetTexture(data.icon or DEFAULT_ICONS[data.kind] or DEFAULT_ICONS.item)
             card.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
         end
@@ -503,6 +554,7 @@ local function Release(card)
         end
     end
     card:Hide()
+    DetachPortrait(card)
     card.data = nil
     for _, particle in ipairs(card.particles) do
         particle.t = nil
@@ -547,7 +599,6 @@ local function Acquire()
     card.bumpT, card.shineT, card.ringT, card.plusT = nil, nil, nil, nil
     card.flash = 0.6
     card.age = 0
-    card.portraitSet = nil
     card.shine:Hide()
     card.ring:Hide()
     card.plus:Hide()
@@ -569,6 +620,10 @@ function Cards.Push(data)
             card.leaving, card.outT = nil, nil
         end
         table.insert(active, 1, card)
+        -- Keep the portrait found for this objective before (e.g. through Questie).
+        if data.portrait == nil and old.portrait then
+            data.portrait = old.portrait
+        end
         card.data = data
         local delta = data.have and old.have and data.have - old.have
         StartBump(card, delta)
@@ -579,12 +634,6 @@ function Cards.Push(data)
         -- The bar starts a step below, so the new progress fills in visibly.
         card.shownFill = (data.have and data.need and data.need > 0) and Clamp01((data.have - 1) / data.need) or 0
         StartShine(card)
-    end
-
-    if ns.db.showIcon and data.portraitUnit and not card.portraitSet then
-        SetPortraitTexture(card.icon, data.portraitUnit)
-        card.icon:SetTexCoord(0, 1, 0, 1)
-        card.portraitSet = true
     end
 
     Refresh(card)
@@ -606,6 +655,7 @@ function Cards.Update(data)
     local card = FindByKey(data.key)
     if card then
         card.data.quest = data.quest
+        card.data.portrait = data.portrait or card.data.portrait
         Refresh(card)
     end
 end

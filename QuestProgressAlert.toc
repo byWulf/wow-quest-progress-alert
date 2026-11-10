@@ -7,9 +7,11 @@
 ## X-License: MIT
 ## X-Curse-Project-ID: 1796362
 ## SavedVariables: QuestProgressAlertDB
+## OptionalDeps: Questie
 ## IconTexture: Interface\Icons\INV_Misc_Note_01
 
 Locales.lua
 Core.lua
+Portraits.lua
 Cards.lua
 Options.lua

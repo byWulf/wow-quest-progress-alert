@@ -7,7 +7,7 @@ Turns the small yellow quest progress text at the top of the screen ("Glowing Cr
 - **Objective complete:** the card turns green, gets a check mark, a ring burst and sparkles.
 - **Quest complete:** an extra golden "Quest complete!" banner once all objectives are done.
 - **Sounds** for progress, completed objectives and completed quests, each selectable or off.
-- Item icons come from your bags; for kills, the portrait of the enemy is shown when it is your target.
+- Item icons come from your bags. Kill objectives show the **head of the enemy**: the addon remembers every enemy you see (target, mouseover, nameplates, targets of your group) for the session, so it also works when a group member made the kill. With [Questie](https://www.curseforge.com/wow/addons/questie) installed (optional), objectives like "Murlocs slain" find the right enemies too. Unknown enemies get a skull.
 
 ## Supported game versions
 
@@ -39,7 +39,7 @@ Everything works right away. The options are under **Options > AddOns > Quest Pr
 - which progress to show (items, kills, other objectives, quest complete, failed quests) and whether to hide the yellow default text
 - display time, display time for completed objectives, fade-out
 - number of popups at once, stack direction, size, width, spacing, position
-- font, font size, background opacity, glow, icon, progress bar, quest name, animations, sparkles, colors
+- font, font size, background opacity, glow, icon, enemy portraits (with or without Questie), progress bar, quest name, animations, sparkles, colors
 - sounds and sound channel
 
 Commands:

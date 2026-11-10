@@ -31,6 +31,8 @@ ns.DEFAULTS = {
     bgAlpha = 0.5,
     glow = 0.6,
     showIcon = true,
+    showPortraits = true,
+    useQuestie = true,
     showBar = true,
     showQuestTitle = true,
     animations = true,
@@ -376,12 +378,12 @@ function ns.FindObjective(name, have, need)
     end
     local best
     ForEachQuest(function(questID, title, objectives, isComplete)
-        for _, objective in ipairs(objectives) do
+        for index, objective in ipairs(objectives) do
             local text = objective.text
             if type(text) == "string" and text:find(name, 1, true) then
                 local upToDate = have == nil or (objective.numFulfilled == have and objective.numRequired == need)
                 local found = {
-                    questID = questID, title = title, objective = objective,
+                    questID = questID, title = title, objective = objective, objectiveIndex = index,
                     isComplete = isComplete, upToDate = upToDate,
                 }
                 if upToDate then
@@ -438,23 +440,6 @@ function ns.ItemIcon(name)
     return icon
 end
 
--- True if the current target (or mouseover) is the killed enemy, so its portrait can be shown.
-function ns.PortraitUnitFor(name)
-    for _, unit in ipairs({ "target", "mouseover" }) do
-        local ok, matches = pcall(function()
-            local unitName = UnitExists(unit) and UnitName(unit)
-            if not unitName or IsSecret(unitName) then
-                return false
-            end
-            return unitName == name
-        end)
-        if ok and matches then
-            return unit
-        end
-    end
-    return nil
-end
-
 ---------------------------------------------------------------------------
 -- Turning messages into popups
 
@@ -483,8 +468,21 @@ local function Enrich(data, attempt)
     attempt = attempt or 1
     local found = ns.FindObjective(data.name, data.have, data.need)
     if found then
+        local changed = false
         if found.title and found.title ~= data.quest then
             data.quest = found.title
+            changed = true
+        end
+        -- Kill objective without a portrait by name: ask Questie which enemies count for it.
+        if data.kind == "kill" and not data.portrait and not data.questieChecked and ns.db.showIcon then
+            data.questieChecked = true
+            local ids, names = ns.Portraits.QuestieTargets(found.questID, found.objectiveIndex)
+            if ids then
+                data.portrait = ns.Portraits.Find(names, ids)
+                changed = changed or data.portrait ~= nil
+            end
+        end
+        if changed then
             ns.Cards.Update(data)
         end
         if found.upToDate or attempt >= 3 then
@@ -572,7 +570,10 @@ function ns.HandleQuestMessage(errorName, message, testData, released)
         if kind == "item" then
             data.icon = ns.ItemIcon(name)
         elseif kind == "kill" then
-            data.portraitUnit = ns.PortraitUnitFor(name)
+            -- The killed enemy may still be targeted: remember it first, then look it up by name.
+            ns.Portraits.Remember("target")
+            ns.Portraits.Remember("mouseover")
+            data.portrait = ns.Portraits.Find({ name })
         end
     end
 
@@ -698,6 +699,7 @@ frame:SetScript("OnEvent", function(_, event, ...)
         end
     elseif event == "PLAYER_LOGIN" then
         ns.Cards.Init()
+        ns.Portraits.Init()
         ns.InitOptions()
         ns.ApplyDefaultMessages()
     end
