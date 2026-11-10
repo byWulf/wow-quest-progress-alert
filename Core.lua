@@ -28,7 +28,7 @@ ns.DEFAULTS = {
 
     font = "DEFAULT",
     fontSize = 16,
-    bgAlpha = 0.88,
+    bgAlpha = 0.5,
     glow = 0.6,
     showIcon = true,
     showBar = true,
