@@ -40,7 +40,7 @@ ns.DEFAULTS = {
     colorQuest = "ffffc933",
     colorFailed = "ffff4d4d",
 
-    soundProgress = true,
+    soundProgress = false,
     soundProgressFile = "questupdate",
     soundObjective = true,
     soundObjectiveFile = "chime",
