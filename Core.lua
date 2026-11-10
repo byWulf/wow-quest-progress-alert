@@ -440,6 +440,22 @@ function ns.ItemIcon(name)
     return icon
 end
 
+-- Item icon through Questie: it knows the item ID of a quest's item objective, and the game returns the
+-- icon of an item ID right away, even for an item that never was in the bags.
+function ns.QuestieItemIcon(name, have, need)
+    if not (ns.db.useQuestie and QuestieLoader and C_Item and C_Item.GetItemIconByID) then
+        return nil
+    end
+    local found = ns.FindObjective(name, have, need)
+    local objective = found and ns.QuestieObjective(found.questID, found.objectiveIndex)
+    if not (objective and objective.Type == "item" and objective.Id) then
+        return nil
+    end
+    local icon = C_Item.GetItemIconByID(objective.Id)
+    iconCache[name] = icon
+    return icon
+end
+
 ---------------------------------------------------------------------------
 -- Turning messages into popups
 
@@ -506,8 +522,20 @@ end
 -- is held back for a moment and only shown if no specific completion came shortly before or after it.
 -- This goes by message type, not text, so it works in every client language.
 local GENERIC_COMPLETE = "ERR_QUEST_UNKNOWN_COMPLETE"
-local GENERIC_HOLD = 0.5
+local GENERIC_HOLD = 0.1
 local lastSpecificDone = -math.huge
+
+-- An item card whose icon is not known yet waits this long, so the item can arrive in the bags.
+local ITEM_ICON_DELAY = 0.1
+local messageSeq = {}
+
+local function ShowObjective(data)
+    ns.Cards.Push(data)
+    ns.PlayEventSound(data.done and 2 or 1)
+    if data.enrich then
+        Enrich(data)
+    end
+end
 
 -- Handles one quest message. Also used by the test sequence (with fake values).
 -- released: the held-back generic message, now to be shown.
@@ -562,13 +590,28 @@ function ns.HandleQuestMessage(errorName, message, testData, released)
         data.key = "other:" .. message
     end
 
+    -- Newest message per objective, so a delayed older one doesn't overwrite a newer count.
+    messageSeq[data.key] = (messageSeq[data.key] or 0) + 1
+    data.seq = messageSeq[data.key]
+    data.enrich = not testData and errorName ~= GENERIC_COMPLETE
+
     if testData then
         for key, value in pairs(testData) do
             data[key] = value
         end
     elseif ns.db.showIcon then
         if kind == "item" then
-            data.icon = ns.ItemIcon(name)
+            data.icon = ns.ItemIcon(name) or ns.QuestieItemIcon(name, have, need)
+            if not data.icon then
+                -- The message can come before the item is in the bags: look again a moment later.
+                C_Timer.After(ITEM_ICON_DELAY, function()
+                    if messageSeq[data.key] == data.seq then
+                        data.icon = ns.ItemIcon(name)
+                        ShowObjective(data)
+                    end
+                end)
+                return
+            end
         elseif kind == "kill" then
             -- The killed enemy may still be targeted: remember it first, then look it up by name.
             ns.Portraits.Remember("target")
@@ -577,12 +620,7 @@ function ns.HandleQuestMessage(errorName, message, testData, released)
         end
     end
 
-    ns.Cards.Push(data)
-    ns.PlayEventSound(data.done and 2 or 1)
-
-    if not testData and errorName ~= GENERIC_COMPLETE then
-        Enrich(data)
-    end
+    ShowObjective(data)
 end
 
 local function OnInfoMessage(messageType, message)

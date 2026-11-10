@@ -127,18 +127,28 @@ function Portraits.Find(names, npcIds)
     return nil
 end
 
+-- Questie's data for one objective of a quest in the log (same index as the quest log), if Questie is
+-- installed and its use is enabled. E.g. { Type = "item", Id = 1234 } or { Type = "killcredit", IdList = {...} }.
+function ns.QuestieObjective(questID, objectiveIndex)
+    if not (ns.db.useQuestie and questID and objectiveIndex and QuestieLoader) then
+        return nil
+    end
+    local ok, objective = pcall(function()
+        local QuestieDB = QuestieLoader:ImportModule("QuestieDB")
+        local quest = QuestieDB and QuestieDB.GetQuest and QuestieDB.GetQuest(questID)
+        return quest and quest.ObjectiveData and quest.ObjectiveData[objectiveIndex]
+    end)
+    return ok and type(objective) == "table" and objective or nil
+end
+
 -- NPC IDs and names that count for a quest objective, from Questie's database (if installed and enabled).
 function Portraits.QuestieTargets(questID, objectiveIndex)
-    if not (ns.db.useQuestie and questID and objectiveIndex and QuestieLoader) then
+    local objective = ns.QuestieObjective(questID, objectiveIndex)
+    if not objective then
         return nil
     end
     local ok, ids, names = pcall(function()
         local QuestieDB = QuestieLoader:ImportModule("QuestieDB")
-        local quest = QuestieDB and QuestieDB.GetQuest and QuestieDB.GetQuest(questID)
-        local objective = quest and quest.ObjectiveData and quest.ObjectiveData[objectiveIndex]
-        if not objective then
-            return nil
-        end
         local list = {}
         if objective.Type == "monster" then
             list[1] = objective.Id
