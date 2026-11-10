@@ -1,0 +1,6 @@
+package-as: QuestProgressAlert
+
+ignore:
+  - AGENTS.md
+  - CLAUDE.md
+  - tools

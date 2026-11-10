@@ -1,0 +1,14 @@
+## Interface: 16001
+## Title: Quest Progress Alert
+## Notes: Shows quest progress (looted quest items, kills, objectives) as eye-catching animated popups instead of the small yellow text.
+## Notes-deDE: Zeigt Questfortschritt (gesammelte Questgegenstände, Kills, Questziele) als auffällige animierte Meldungen statt des kleinen gelben Texts.
+## Author: byWulf
+## Version: @project-version@
+## X-License: MIT
+## SavedVariables: QuestProgressAlertDB
+## IconTexture: Interface\Icons\INV_Misc_Note_01
+
+Locales.lua
+Core.lua
+Cards.lua
+Options.lua
