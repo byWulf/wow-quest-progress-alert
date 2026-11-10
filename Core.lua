@@ -503,13 +503,43 @@ local function Enrich(data, attempt)
     end
 end
 
+-- The game also sends a generic "Objective Complete." (ERR_QUEST_UNKNOWN_COMPLETE) without saying which
+-- objective. Next to a specific message ("Glowing Crystal: 8/8", "... (Complete)") it adds nothing, so it
+-- is held back for a moment and only shown if no specific completion came shortly before or after it.
+-- This goes by message type, not text, so it works in every client language.
+local GENERIC_COMPLETE = "ERR_QUEST_UNKNOWN_COMPLETE"
+local GENERIC_HOLD = 0.5
+local lastSpecificDone = -math.huge
+
 -- Handles one quest message. Also used by the test sequence (with fake values).
-function ns.HandleQuestMessage(errorName, message, testData)
+-- released: the held-back generic message, now to be shown.
+function ns.HandleQuestMessage(errorName, message, testData, released)
     local kind = KIND_BY_ERROR[errorName]
-    if not kind or not ns.db.enabled or not ns.KindEnabled(kind) then
+    if not kind or not ns.db.enabled then
         return
     end
     local name, have, need, title = ns.ParseMessage(errorName, message)
+
+    -- Remembered even if this kind is switched off, so the generic message doesn't show up instead.
+    local done = (have and need and have >= need) or (have == nil)
+    if done and kind ~= "failed" and errorName ~= GENERIC_COMPLETE then
+        lastSpecificDone = GetTime()
+    end
+    if not ns.KindEnabled(kind) then
+        return
+    end
+    if errorName == GENERIC_COMPLETE and not released then
+        local received = GetTime()
+        if received - lastSpecificDone <= GENERIC_HOLD then
+            return
+        end
+        C_Timer.After(GENERIC_HOLD, function()
+            if lastSpecificDone < received then
+                ns.HandleQuestMessage(errorName, message, testData, true)
+            end
+        end)
+        return
+    end
     local data = {
         key = kind .. ":" .. (name or message),
         kind = kind,
@@ -529,8 +559,8 @@ function ns.HandleQuestMessage(errorName, message, testData)
         return
     end
 
-    data.done = (have and need and have >= need) or (have == nil)
-    if errorName == "ERR_QUEST_UNKNOWN_COMPLETE" then
+    data.done = done
+    if errorName == GENERIC_COMPLETE then
         data.key = "other:" .. message
     end
 
@@ -549,7 +579,7 @@ function ns.HandleQuestMessage(errorName, message, testData)
     ns.Cards.Push(data)
     ns.PlayEventSound(data.done and 2 or 1)
 
-    if not testData then
+    if not testData and errorName ~= GENERIC_COMPLETE then
         Enrich(data)
     end
 end
